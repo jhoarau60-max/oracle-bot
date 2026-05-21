@@ -207,12 +207,19 @@ def load_data_from_supabase() -> dict:
         s_res = sb_client.table("bot_state").select("*").eq("id", 2).execute()
         if s_res.data:
             s = s_res.data[0]
-            base["capital"]      = float(s.get("capital") or CAPITAL_INITIAL)
-            base["total_pnl"]    = float(s.get("total_pnl") or 0)
+            cap_from_db = float(s.get("capital") or CAPITAL_INITIAL)
+            # Garde-fou : capital négatif ou < 10% du capital initial = données stales
+            if cap_from_db < CAPITAL_INITIAL * 0.10:
+                logger.warning(f"Capital Supabase anormal ({cap_from_db:.2f}) — reset à CAPITAL_INITIAL ({CAPITAL_INITIAL})")
+                base["capital"]   = CAPITAL_INITIAL
+                base["total_pnl"] = 0.0
+            else:
+                base["capital"]   = cap_from_db
+                base["total_pnl"] = float(s.get("total_pnl") or 0)
             base["daily_pnl"]    = float(s.get("daily_pnl") or 0)
             base["daily_trades"] = int(s.get("daily_trades") or 0)
             base["win_streak"]   = int(s.get("win_streak") or 0)
-            base["loss_streak"]  = 0  # Reset au démarrage — pertes d'avant redeploy ne bloquent pas
+            base["loss_streak"]  = 0  # Reset au démarrage
             base["last_reset"]   = str(s.get("last_reset") or base["last_reset"])[:10]
 
         # Positions ouvertes — ferme automatiquement les stale (> MAX_POSITION_HOURS)
