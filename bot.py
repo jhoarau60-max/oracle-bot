@@ -96,7 +96,7 @@ YF_FALLBACK_MAP  = {
     "AEM":      "AEM",
 }
 # Métaux uniquement — filtre DXY (corrélation inverse Dollar)
-METALS_DXY       = {"XAUUSD=X", "SI=F"}
+METALS_DXY       = {"SI=F"}
 
 SUPABASE_URL     = ENV.get("SUPABASE_URL", "") or ENV.get("WIKI_SUPABASE_URL", "")
 SUPABASE_SERVICE_KEY = ENV.get("SUPABASE_SERVICE_KEY", "") or ENV.get("WIKI_SUPABASE_KEY", "")
@@ -125,7 +125,7 @@ else:
     logger.warning("Wiki Supabase désactivé — WIKI_SUPABASE_URL / WIKI_SUPABASE_KEY manquants")
 
 TICKER_TO_BOT = {t: "oracle" for t in [
-    "XAUUSD=X", "GOLD", "NEM", "RIO", "BHP", "AEM",
+    "GOLD", "NEM", "RIO", "BHP", "AEM",
     "SI=F", "CL=F", "PL=F", "HG=F",
 ]}
 RISK_PER_TRADE      = 0.01   # 1 % du capital par trade (Jesse Livermore : préserver le capital)
@@ -154,8 +154,7 @@ TZ              = pytz.timezone("Europe/Brussels")
 TRADES_FILE     = "trades.json"
 
 WEEKDAY_INSTRUMENTS = {
-    # Twelve Data (free plan)
-    "XAUUSD=X": {"name": "Or (XAU/USD)",    "emoji": "🥇",  "pip": 0.01},
+    # Twelve Data (free plan) — XAU/USD géré par Gold Bot (Solix), pas dupliqué ici
     "GOLD":     {"name": "Barrick Gold",     "emoji": "🏭",  "pip": 0.01},
     "NEM":      {"name": "Newmont",          "emoji": "⛏️", "pip": 0.01},
     "RIO":      {"name": "Rio Tinto",        "emoji": "🪨",  "pip": 0.01},
@@ -1791,8 +1790,8 @@ ORACLE_DOMAINS = {
             "dollar", "interest rate", "commodities", "bullion", "safe haven",
             "central bank", "rate", "treasury", "bond yield", "hedge",
         ],
-        "ticker": "XAUUSD=X",
-        "trade": True,
+        "ticker": "SI=F",
+        "trade": False,
     },
     "energy": {
         "name": "Pétrole & Énergie",
