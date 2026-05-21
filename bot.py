@@ -1826,55 +1826,6 @@ ORACLE_DOMAINS = {
         "ticker": "^GSPC",
         "trade": False,
     },
-    "football": {
-        "name": "Football",
-        "emoji": "⚽",
-        "rss": [
-            "https://feeds.bbci.co.uk/sport/football/rss.xml",
-            "https://www.lequipe.fr/rss/actu_rss_Football.xml",
-            "https://www.eurosport.fr/football/rss.xml",
-        ],
-        "keywords": [
-            "football", "soccer", "match", "goal", "league", "champions",
-            "premier league", "ligue 1", "serie a", "bundesliga", "la liga",
-            "injury", "transfer", "win", "loss", "draw", "world cup", "euro",
-            "copa", "ucl", "form", "squad",
-        ],
-        "ticker": None,
-        "trade": False,
-    },
-    "tennis": {
-        "name": "Tennis",
-        "emoji": "🎾",
-        "rss": [
-            "https://feeds.bbci.co.uk/sport/tennis/rss.xml",
-            "https://www.eurosport.fr/tennis/rss.xml",
-        ],
-        "keywords": [
-            "tennis", "atp", "wta", "grand slam", "wimbledon", "roland garros",
-            "us open", "australian open", "djokovic", "alcaraz", "sinner",
-            "swiatek", "final", "semifinal", "injury", "ranking", "tournament",
-        ],
-        "ticker": None,
-        "trade": False,
-    },
-    "politique": {
-        "name": "Politique & Géopolitique",
-        "emoji": "🏛️",
-        "rss": [
-            "https://feeds.bbci.co.uk/news/politics/rss.xml",
-            "https://feeds.reuters.com/reuters/politicsNews",
-            "https://rss.nytimes.com/services/xml/rss/nyt/Politics.xml",
-        ],
-        "keywords": [
-            "election", "vote", "president", "prime minister", "government",
-            "war", "peace", "sanctions", "trade", "tariff", "trump", "macron",
-            "geopolitical", "conflict", "agreement", "treaty", "summit", "nato",
-            "congress", "senate", "parliament", "policy",
-        ],
-        "ticker": None,
-        "trade": False,
-    },
 }
 
 
