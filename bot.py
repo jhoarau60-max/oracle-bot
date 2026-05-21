@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# v1.0.1
 """
 ORACLE BOT — Matières premières + Actions minières
 Project Inves'T — John H.
