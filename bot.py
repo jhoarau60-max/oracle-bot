@@ -597,15 +597,15 @@ def adaptive_params(data: dict) -> dict:
     learned = data.get("learned_params", {})
 
     if len(recent) < 5:
-        base = {"threshold": 5, "risk_per_trade": 0.02, "sl_mult": 1.5, "tp_mult": 6.0, "mode": "démarrage"}
+        base = {"threshold": 3, "risk_per_trade": 0.02, "sl_mult": 1.5, "tp_mult": 6.0, "mode": "démarrage"}
     else:
         wr = sum(1 for t in recent if t.get("pnl", 0) > 0) / len(recent)
         if wr < 0.35:
-            base = {"threshold": 5, "risk_per_trade": 0.015, "sl_mult": 1.8, "tp_mult": 7.2, "mode": "récupération"}
+            base = {"threshold": 3, "risk_per_trade": 0.015, "sl_mult": 1.8, "tp_mult": 7.2, "mode": "récupération"}
         elif wr > 0.65:
-            base = {"threshold": 5, "risk_per_trade": 0.025, "sl_mult": 1.3, "tp_mult": 5.2, "mode": "sélectif"}
+            base = {"threshold": 4, "risk_per_trade": 0.025, "sl_mult": 1.3, "tp_mult": 5.2, "mode": "sélectif"}
         else:
-            base = {"threshold": 5, "risk_per_trade": 0.02, "sl_mult": 1.5, "tp_mult": 6.0, "mode": "normal"}
+            base = {"threshold": 3, "risk_per_trade": 0.02, "sl_mult": 1.5, "tp_mult": 6.0, "mode": "normal"}
 
     if learned:
         if "threshold"      in learned: base["threshold"]      = max(3, min(6,   int(learned["threshold"])))
