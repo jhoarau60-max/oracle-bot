@@ -150,6 +150,9 @@ PRICE_BOUNDS = {
     "CL=F":     (20,   250),
     "PL=F":     (500,  3000),
     "HG=F":     (1.5,  8.0),
+    "NQ=F":     (10000, 30000),
+    "ES=F":     (3000,  8000),
+    "^FCHI":    (5000,  10000),
 }
 TZ              = pytz.timezone("Europe/Brussels")
 TRADES_FILE     = "trades.json"
@@ -166,6 +169,10 @@ WEEKDAY_INSTRUMENTS = {
     "CL=F":     {"name": "Pétrole WTI",      "emoji": "🛢️", "pip": 0.01},
     "PL=F":     {"name": "Platine",          "emoji": "⚗️", "pip": 0.1},
     "HG=F":     {"name": "Cuivre",           "emoji": "🔩",  "pip": 0.001},
+    # Indices boursiers — yfinance
+    "NQ=F":     {"name": "Nasdaq 100",       "emoji": "💻",  "pip": 1.0},
+    "ES=F":     {"name": "S&P 500",          "emoji": "🇺🇸", "pip": 0.25},
+    "^FCHI":    {"name": "CAC 40",           "emoji": "🇫🇷", "pip": 1.0},
 }
 
 def is_stock_market_hours() -> bool:
