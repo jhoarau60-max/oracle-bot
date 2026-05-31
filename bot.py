@@ -470,8 +470,8 @@ def log_trade_features(features: dict, supabase_id: str = ""):
             "direction_int":    features.get("direction_int", 0),
             "win_rate_20":      features.get("win_rate_20", 50),
             "loss_streak":      features.get("loss_streak", 0),
-            "sl_mult":          features.get("sl_mult", 1.5),
-            "tp_mult":          features.get("tp_mult", 3.75),
+            "sl_mult":          features.get("sl_mult", 2.460),
+            "tp_mult":          features.get("tp_mult", 4.783),
         }).execute()
     except Exception as e:
         logger.error(f"log_trade_features: {e}")
@@ -1149,11 +1149,11 @@ def compute_signal_score(df: pd.DataFrame) -> tuple[str | None, int, list[str]]:
         reasons_sell.append("✅ MACD baissier")
 
     # 4. RSI (Wilder) — zone élargie en tendance forte
-    strong_uptrend = adx > 30 and ema9 > ema21
-    if 45 <= rsi <= 75:
+    strong_uptrend = adx > 31.4 and ema9 > ema21
+    if 53.7 <= rsi <= 76.7:
         score_buy += 1
         reasons_buy.append(f"✅ RSI favorable achat ({rsi:.1f})")
-    elif 25 <= rsi < 45:
+    elif 30.8 <= rsi < 53.7:
         score_sell += 1
         reasons_sell.append(f"✅ RSI momentum baissier ({rsi:.1f})")
     elif rsi > 75:
@@ -1175,7 +1175,7 @@ def compute_signal_score(df: pd.DataFrame) -> tuple[str | None, int, list[str]]:
         reasons_sell.append(f"✅ Stochastique baissier ({stk:.1f})")
 
     # 6. ADX — force de la tendance (Richard Dennis) — minimum 30
-    if adx > 30:
+    if adx > 31.4:
         if ema9 > ema21:
             score_buy += 1
             reasons_buy.append(f"✅ ADX fort ({adx:.1f}) — tendance haussière confirmée")
@@ -1194,10 +1194,10 @@ def compute_signal_score(df: pd.DataFrame) -> tuple[str | None, int, list[str]]:
         score_sell += 1
         reasons_sell.append(f"✅ Williams %R en zone de vente ({wr:.1f})")
 
-    threshold = 4  # Relevé 3→4 : exige plus de confirmations avant d'entrer
+    threshold = 5  # Optuna : 4→5
 
-    # Filtre ADX obligatoire — pas de trade en consolidation (ADX < 22)
-    if adx < 22:
+    # Filtre ADX obligatoire — pas de trade en consolidation
+    if adx < 26.3:
         logger.info(f"Signal bloqué — ADX trop faible ({adx:.1f}) : marché en range, pas de trade")
         return None, max(score_buy, score_sell), []
 
