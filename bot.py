@@ -328,9 +328,9 @@ def get_instruments() -> dict:
     return WEEKDAY_INSTRUMENTS
 
 def is_trading_session() -> bool:
-    """London (7h-17h) + NY (13h-22h) Paris. Exits toujours surveillés."""
+    """Kill zone ICT : London Open 9h-12h + NY Open 15h-18h (heure Paris)."""
     h = datetime.now(TZ).hour
-    return 7 <= h < 22
+    return (9 <= h < 12) or (15 <= h < 18)
 
 def is_blackout_session() -> bool:
     """Blackout 21h-06h UTC — session asiatique, spreads larges, pas de nouveaux trades."""
@@ -1077,6 +1077,85 @@ def fibonacci_levels(df: pd.DataFrame) -> dict:
     }
 
 
+# ── ICT : Fibonacci OTE + FVG + IFVG + OB ────────────────────────────────────
+def _ict_find_swing(df: pd.DataFrame, lookback: int = 60) -> tuple[float, float]:
+    recent = df.tail(lookback)
+    return float(recent["High"].max()), float(recent["Low"].min())
+
+def _ict_fib_levels(swing_high: float, swing_low: float, trend: str) -> dict:
+    diff = swing_high - swing_low
+    lvls = {}
+    for r in [0.236, 0.382, 0.5, 0.618, 0.786]:
+        lvls[r] = (swing_high - diff * r) if trend == "UP" else (swing_low + diff * r)
+    return lvls
+
+def _ict_in_ote(price: float, lvls: dict, atr: float, trend: str) -> tuple[bool, str]:
+    lvl618 = lvls.get(0.618, 0)
+    lvl786 = lvls.get(0.786, 0)
+    lo, hi = min(lvl618, lvl786), max(lvl618, lvl786)
+    for key_lvl in [0.618, 0.786]:
+        target = lvls.get(key_lvl, 0)
+        if abs(price - target) <= atr * 0.6:
+            return True, f"✅✅ OTE exact {key_lvl*100:.1f}%"
+    if lo <= price <= hi:
+        return True, "✅ Prix en zone OTE (61.8%–78.6%)"
+    return False, ""
+
+def _ict_detect_fvg(df: pd.DataFrame, lookback: int = 30) -> tuple[bool, bool, str]:
+    recent = df.tail(lookback).reset_index(drop=True)
+    price = float(recent["Close"].iloc[-1])
+    for i in range(2, len(recent)):
+        h0 = float(recent["High"].iloc[i - 2])
+        l0 = float(recent["Low"].iloc[i - 2])
+        h2 = float(recent["High"].iloc[i])
+        l2 = float(recent["Low"].iloc[i])
+        if h0 < l2 and h0 <= price <= l2:
+            return True, False, f"✅ FVG haussier [{h0:.2f}–{l2:.2f}]"
+        if l0 > h2 and h2 <= price <= l0:
+            return False, True, f"✅ FVG baissier [{h2:.2f}–{l0:.2f}]"
+    return False, False, ""
+
+def _ict_detect_ob(df: pd.DataFrame, lookback: int = 30, atr_mult: float = 1.5) -> tuple[bool, bool, str]:
+    recent = df.tail(lookback).reset_index(drop=True)
+    price = float(recent["Close"].iloc[-1])
+    atr   = float(recent["ATR"].iloc[-1])
+    thr   = atr * atr_mult
+    for i in range(1, len(recent) - 1):
+        o  = float(recent["Open"].iloc[i]); c  = float(recent["Close"].iloc[i])
+        h  = float(recent["High"].iloc[i]); l  = float(recent["Low"].iloc[i])
+        cn = float(recent["Close"].iloc[i + 1]); on = float(recent["Open"].iloc[i + 1])
+        if c < o and (cn - on) > thr and l <= price <= h:
+            return True, False, f"✅ OB haussier [{l:.2f}–{h:.2f}]"
+        if c > o and (on - cn) > thr and l <= price <= h:
+            return False, True, f"✅ OB baissier [{l:.2f}–{h:.2f}]"
+    return False, False, ""
+
+def _ict_detect_ifvg(df: pd.DataFrame, lookback: int = 50) -> tuple[bool, bool, str]:
+    """Inverse Fair Value Gap — ancien FVG comblé qui s'est inversé en zone S/R opposée."""
+    recent = df.tail(lookback).reset_index(drop=True)
+    n = len(recent)
+    price = float(recent["Close"].iloc[-1])
+    for i in range(2, n - 3):
+        h0 = float(recent["High"].iloc[i - 2]); l0 = float(recent["Low"].iloc[i - 2])
+        h2 = float(recent["High"].iloc[i]);     l2 = float(recent["Low"].iloc[i])
+        if h0 < l2:
+            gap_lo, gap_hi = h0, l2
+            filled = any(
+                float(recent["Low"].iloc[j]) <= gap_hi and float(recent["High"].iloc[j]) >= gap_lo
+                for j in range(i + 1, n - 1)
+            )
+            if filled and gap_lo <= price <= gap_hi:
+                return False, True, f"✅ IFVG baissier [{gap_lo:.2f}–{gap_hi:.2f}]"
+        if l0 > h2:
+            gap_lo, gap_hi = h2, l0
+            filled = any(
+                float(recent["Low"].iloc[j]) <= gap_hi and float(recent["High"].iloc[j]) >= gap_lo
+                for j in range(i + 1, n - 1)
+            )
+            if filled and gap_lo <= price <= gap_hi:
+                return True, False, f"✅ IFVG haussier [{gap_lo:.2f}–{gap_hi:.2f}]"
+    return False, False, ""
+
 # ── SCORE DE SIGNAL (système de notation multi-critères) ───────────────────────
 def compute_signal_score(df: pd.DataFrame) -> tuple[str | None, int, list[str]]:
     """
@@ -1193,6 +1272,33 @@ def compute_signal_score(df: pd.DataFrame) -> tuple[str | None, int, list[str]]:
     elif -80 <= wr <= -20 and wr < float(prev["WILLIAMS_R"]):
         score_sell += 1
         reasons_sell.append(f"✅ Williams %R en zone de vente ({wr:.1f})")
+
+    # 8. OTE Fibonacci (zone 61.8%–78.6%)
+    _trend = "UP" if c > ema200 else "DOWN"
+    _sh, _sl = _ict_find_swing(df)
+    _lvls = _ict_fib_levels(_sh, _sl, _trend)
+    _atr = float(df["ATR"].iloc[-1]) if "ATR" in df.columns else (float(df["Close"].iloc[-1]) * 0.005)
+    ote_ok, ote_desc = _ict_in_ote(c, _lvls, _atr, _trend)
+    if ote_ok:
+        if _trend == "UP":
+            score_buy  += 1; reasons_buy.append(ote_desc)
+        else:
+            score_sell += 1; reasons_sell.append(ote_desc)
+
+    # 9. FVG (Fair Value Gap)
+    fvg_bull, fvg_bear, fvg_desc = _ict_detect_fvg(df)
+    if fvg_bull: score_buy  += 1; reasons_buy.append(fvg_desc)
+    if fvg_bear: score_sell += 1; reasons_sell.append(fvg_desc)
+
+    # 10. OB (Order Block)
+    ob_bull, ob_bear, ob_desc = _ict_detect_ob(df)
+    if ob_bull: score_buy  += 1; reasons_buy.append(ob_desc)
+    if ob_bear: score_sell += 1; reasons_sell.append(ob_desc)
+
+    # 11. IFVG (Inverse Fair Value Gap)
+    ifvg_bull, ifvg_bear, ifvg_desc = _ict_detect_ifvg(df)
+    if ifvg_bull: score_buy  += 2; reasons_buy.append(ifvg_desc)
+    if ifvg_bear: score_sell += 2; reasons_sell.append(ifvg_desc)
 
     threshold = 5  # Optuna : 4→5
 
