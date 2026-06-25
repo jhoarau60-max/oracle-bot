@@ -269,6 +269,11 @@ def load_data_from_supabase() -> dict:
             ).eq("status", "closed").eq("bot", "oracle").order(
                 "closed_at", desc=True
             ).limit(100).execute()
+            # Inverse : la requête renvoie le plus récent en premier,
+            # mais closed_trades doit être chronologique (le plus récent en dernier)
+            # comme les appends en cours d'exécution, sinon closed_trades[-1] pointe
+            # vers le trade le plus ANCIEN du lot juste après un restart Railway.
+            h_res.data = list(reversed(h_res.data or []))
             for row in (h_res.data or []):
                 if row.get("pnl") is not None:
                     base["closed_trades"].append({
@@ -2903,6 +2908,10 @@ async def trading_loop(app: Application):
 
         except Exception as e:
             logger.error(f"Erreur boucle trading: {e}")
+            try:
+                await app.bot.send_message(JOHN_ID, f"⚠️ Oracle Bot — erreur boucle trading: {e}")
+            except Exception:
+                pass
 
         await asyncio.sleep(5 * 60)
 
