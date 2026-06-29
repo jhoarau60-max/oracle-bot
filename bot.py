@@ -2627,6 +2627,9 @@ async def trading_loop(app: Application):
     _ml_model = None  # ML entraîné depuis Supabase après 50 trades
     cycle         = 0
     last_ml_train = 0  # cycle du dernier entraînement ML
+    startup_learned = load_learned_params()
+    if startup_learned:
+        logger.info(f"Params Gemini restaurés au démarrage: {startup_learned}")
 
     while True:
         try:
@@ -2634,6 +2637,10 @@ async def trading_loop(app: Application):
             instruments = get_instruments()
             cycle += 1
             hourly_lines = []
+            if startup_learned and not data.get("learned_params"):
+                data["learned_params"] = startup_learned
+                save_data(data)
+                startup_learned = {}
 
             # Exits toujours surveillés — même hors session (évite positions bloquées overnight)
             for ticker, info in instruments.items():
