@@ -238,13 +238,23 @@ def load_data_from_supabase() -> dict:
             # Position trop ancienne : fermer dans Supabase, ne pas réimporter
             if opened_at and opened_at < stale_cutoff:
                 try:
+                    _entry = float(row.get("price_entry") or 0)
+                    _qty   = float(row.get("qty") or 0)
+                    _real_exit = _entry
+                    try:
+                        _df = fetch(row["symbol"])
+                        if _df is not None and not _df.empty:
+                            _real_exit = float(_df["Close"].squeeze().iloc[-1])
+                    except Exception as _fe:
+                        logger.error(f"Fetch prix réel échoué pour clôture stale {row['symbol']}: {_fe}")
+                    _real_pnl = (_real_exit - _entry) * _qty if row.get("direction") == "BUY" else (_entry - _real_exit) * _qty
                     sb_client.table("trade_history").update({
                         "status":     "closed",
-                        "pnl":        0.0,
-                        "price_exit": float(row.get("price_entry") or 0),
+                        "pnl":        round(_real_pnl, 2),
+                        "price_exit": _real_exit,
                         "closed_at":  now_utc.isoformat(),
                     }).eq("id", row["id"]).execute()
-                    logger.info(f"Position stale fermée au démarrage: {row['symbol']} (ouverte {opened_at})")
+                    logger.info(f"Position stale fermée au démarrage: {row['symbol']} (ouverte {opened_at}) — prix réel {_real_exit}, pnl {_real_pnl:.2f}")
                 except Exception as e:
                     logger.error(f"Fermeture stale échouée: {e}")
                 continue
