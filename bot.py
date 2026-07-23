@@ -3137,6 +3137,32 @@ async def cmd_rapport(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("📊 Génération du rapport complet...")
     await evening_report(context.application)
 
+async def cmd_parinstrument(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    data = load_data()
+    trades = data.get("closed_trades", [])
+    if not trades:
+        await update.message.reply_text("📊 Aucun trade fermé enregistré localement.")
+        return
+    stats: dict = {}
+    for t in trades:
+        tk = t.get("ticker", "?")
+        s = stats.setdefault(tk, {"n": 0, "g": 0, "p": 0, "pnl": 0.0})
+        s["n"] += 1
+        pnl = t.get("pnl", 0) or 0
+        s["pnl"] += pnl
+        if pnl > 0:
+            s["g"] += 1
+        else:
+            s["p"] += 1
+    rows = sorted(stats.items(), key=lambda kv: kv[1]["pnl"])
+    msg = f"📊 *Répartition par instrument (sur {len(trades)} trades enregistrés localement)*\n\n"
+    for tk, s in rows:
+        info = WEEKDAY_INSTRUMENTS.get(tk, {"name": tk})
+        wr = (s["g"] / s["n"] * 100) if s["n"] else 0
+        em = "🔴" if s["pnl"] < 0 else "🟢"
+        msg += f"{em} {info['name']} ({tk}) — {s['n']} trades | {s['g']}G/{s['p']}P ({wr:.1f}%) | P&L {s['pnl']:+.2f}€\n"
+    await update.message.reply_text(msg, parse_mode="Markdown")
+
 async def cmd_capital(update: Update, context: ContextTypes.DEFAULT_TYPE):
     data = load_data()
     pct  = (data["capital"] - CAPITAL_INITIAL) / CAPITAL_INITIAL * 100
@@ -3199,6 +3225,7 @@ async def main():
     app.add_handler(CommandHandler("start",   cmd_start))
     app.add_handler(CommandHandler("status",  cmd_status))
     app.add_handler(CommandHandler("rapport", cmd_rapport))
+    app.add_handler(CommandHandler("parinstrument", cmd_parinstrument))
     app.add_handler(CommandHandler("capital", cmd_capital))
     app.add_handler(CommandHandler("signal",  cmd_signal))
     app.add_handler(CommandHandler("myid",      cmd_myid))
