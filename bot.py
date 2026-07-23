@@ -158,21 +158,16 @@ TZ              = pytz.timezone("Europe/Brussels")
 TRADES_FILE     = "trades.json"
 
 WEEKDAY_INSTRUMENTS = {
-    # Twelve Data (free plan) — XAU/USD géré par Gold Bot (Solix), pas dupliqué ici
+    # Réduit aux 4 meilleurs performeurs — diagnostic /parinstrument du 23/07/2026 (229 trades) :
+    # CAC 40 +29.44€ (55.9% WR) | Pétrole WTI +19.73€ (53.3% WR) | Newmont +16.70€ (66.7% WR) | Barrick Gold +11.86€ (42.9% WR)
     "GOLD":     {"name": "Barrick Gold",     "emoji": "🏭",  "pip": 0.01},
     "NEM":      {"name": "Newmont",          "emoji": "⛏️", "pip": 0.01},
-    "RIO":      {"name": "Rio Tinto",        "emoji": "🪨",  "pip": 0.01},
-    "BHP":      {"name": "BHP Group",        "emoji": "⚙️", "pip": 0.01},
-    "AEM":      {"name": "Agnico Eagle",     "emoji": "🦅",  "pip": 0.01},
-    # yfinance uniquement (commodity futures — TD free plan insuffisant)
-    "SI=F":     {"name": "Argent (XAG/USD)", "emoji": "🥈",  "pip": 0.001},
     "CL=F":     {"name": "Pétrole WTI",      "emoji": "🛢️", "pip": 0.01},
-    "PL=F":     {"name": "Platine",          "emoji": "⚗️", "pip": 0.1},
-    "HG=F":     {"name": "Cuivre",           "emoji": "🔩",  "pip": 0.001},
-    # Indices boursiers — yfinance
-    "NQ=F":     {"name": "Nasdaq 100",       "emoji": "💻",  "pip": 1.0},
-    "ES=F":     {"name": "S&P 500",          "emoji": "🇺🇸", "pip": 0.25},
     "^FCHI":    {"name": "CAC 40",           "emoji": "🇫🇷", "pip": 1.0},
+    # Retirés (perte ou sous-performance) :
+    # "RIO" Rio Tinto +3.46€ (25% WR) | "AEM" Agnico Eagle +7.33€
+    # "BHP" BHP Group -5.34€ (20% WR) | "SI=F" Argent -4.37€ (28.6% WR)
+    # "PL=F" Platine +9.04€ | "HG=F" Cuivre +1.86€ | "NQ=F" Nasdaq 100 +7.45€ | "ES=F" S&P 500 +9.60€
 }
 
 def is_stock_market_hours() -> bool:
