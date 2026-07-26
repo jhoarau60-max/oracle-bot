@@ -1317,13 +1317,26 @@ def compute_signal_score(df: pd.DataFrame) -> tuple[str | None, int, list[str]]:
         logger.info(f"Signal bloqué — ADX trop faible ({adx:.1f}) : marché en range, pas de trade")
         return None, max(score_buy, score_sell), []
 
+    # Filtre Support/Résistance obligatoire — on ne trade QUE collé à un vrai plus haut ou
+    # plus bas récent (60 bougies, même swing que l'OTE ci-dessus), jamais au milieu du
+    # range même si le score est bon. "Vrai" niveau = extrême du swing, pas un retracement interne.
+    sr_zone_mult    = 1.2
+    near_support    = _atr > 0 and c <= _sl + _atr * sr_zone_mult
+    near_resistance = _atr > 0 and c >= _sh - _atr * sr_zone_mult
+
     # Filtre EMA200 obligatoire — trade UNIQUEMENT dans le sens de la tendance principale
     if score_buy >= threshold and score_buy > score_sell:
+        if not near_support:
+            logger.info(f"BUY bloqué — prix ({c:.2f}) pas collé au support récent ({_sl:.2f}) : pas de vrai niveau")
+            return None, score_buy, []
         if c < ema200:
             logger.info(f"BUY bloqué — prix ({c:.2f}) sous EMA200 ({ema200:.2f}) : contre-tendance")
             return None, score_buy, []
         return "BUY", min(score_buy, 7), reasons_buy
     elif score_sell >= threshold and score_sell > score_buy:
+        if not near_resistance:
+            logger.info(f"SELL bloqué — prix ({c:.2f}) pas collé à la résistance récente ({_sh:.2f}) : pas de vrai niveau")
+            return None, score_sell, []
         if c > ema200:
             logger.info(f"SELL bloqué — prix ({c:.2f}) au-dessus EMA200 ({ema200:.2f}) : contre-tendance")
             return None, score_sell, []
