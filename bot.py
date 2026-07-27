@@ -338,14 +338,17 @@ def get_instruments() -> dict:
     return WEEKDAY_INSTRUMENTS
 
 def is_trading_session() -> bool:
-    """Kill zone ICT : London Open 9h-12h + NY Open 15h-18h (heure Paris)."""
+    """Kill zone ICT : Asian (2h-9h) + London Open (9h-12h) + NY Open (15h-18h) (heure Paris).
+    Alignee sur Gold-bot (2026-07-27) : la session asiatique est desormais active elle aussi."""
     h = datetime.now(TZ).hour
-    return (9 <= h < 12) or (15 <= h < 18)
+    return (2 <= h < 9) or (9 <= h < 12) or (15 <= h < 18)
 
 def is_blackout_session() -> bool:
-    """Blackout 21h-06h UTC — session asiatique, spreads larges, pas de nouveaux trades."""
-    h_utc = datetime.now(UTC).hour
-    return h_utc >= 21 or h_utc < 6
+    """Blackout 21h-minuit heure Paris uniquement (aligne sur Gold-bot).
+    L'ancien blackout 21h-06h UTC bloquait toute la session asiatique — retire pour
+    laisser is_trading_session() gerer cette fenetre desormais autorisee."""
+    h = datetime.now(TZ).hour
+    return h >= 21
 
 def get_current_session() -> str:
     """Session active UTC pour logs et features ML."""
@@ -2691,15 +2694,15 @@ async def trading_loop(app: Application):
                     if pnl_e < 0:
                         asyncio.create_task(post_mortem_analysis(app, pos))
 
-            # Filtre session : pas de NOUVEAUX trades hors London/NY
+            # Filtre session : pas de NOUVEAUX trades hors Asie/London/NY
             if not is_trading_session():
                 logger.info("Hors session — exits surveillés, pas de nouveaux trades")
                 await asyncio.sleep(30 * 60)
                 continue
 
-            # Blackout 21h-00h UTC — gap asiatique
+            # Blackout 21h-minuit Paris (aligné sur Gold-bot)
             if is_blackout_session():
-                logger.info("Blackout 21h-00h UTC — aucun nouveau trade")
+                logger.info("Blackout 21h-minuit Paris — aucun nouveau trade")
                 await asyncio.sleep(30 * 60)
                 continue
 
